@@ -1,404 +1,424 @@
 # Smart Task Manager
 
-A full‑stack productivity application built as a **professional portfolio project**. This repository documents **every step of the build**, including setup decisions, errors encountered, fixes applied, and lessons learned.
+A full‑stack productivity application built as a professional portfolio project. This repository documents the build process, setup decisions, errors encountered, fixes applied, and lessons learned.
 
-> ⚠️ This README is intentionally detailed. It demonstrates real‑world debugging, system configuration, and problem‑solving — exactly what employers look for.
+> This README is intentionally detailed — it demonstrates real‑world debugging, system configuration, and problem‑solving useful for employers.
+TypeScript warnings do not always indicate runtime failures
 
----
+## Step 4 Status
 
-## 📌 Project Goals
+- PostgreSQL connected
+- Prisma schema migrated
+- Prisma Client generated
+- Express route querying database successfully
+- No runtime crashes
 
-* Build a production‑style **full‑stack web application**
-* Demonstrate real backend + database skills
-* Use industry‑standard tooling (Node.js, PostgreSQL, Prisma)
-* Document **real developer issues**, not just happy paths
-
----
-
-## 🧱 Tech Stack (So Far)
-
-### Backend
-
-* Node.js
-* npm
-* PostgreSQL 18
-* Prisma ORM
-
-### Tooling
-
-* Visual Studio Code
-* GitHub Desktop
-* pgAdmin 4
-* SQL Shell (psql)
-
----
-
-## 🗂️ Project Structure
-
-```
-smart-task-manager/
-├── server/
-│   ├── prisma/
-│   │   └── schema.prisma
-│   ├── .env
-│   ├── package.json
-│   └── prisma.config.ts
-├── README.md
-```
-
----
-
-## 🚀 STEP 1 — Project & Environment Setup
-
-### Actions
-
-* Created GitHub repository
-* Cloned repository locally using GitHub Desktop
-* Opened project in Visual Studio Code
-
-### Issues Encountered
-
-* GitHub vs GitHub Desktop confusion
-
-### Resolution
-
-* Clarified correct workflow:
-
-  * GitHub (website) → repo creation
-  * GitHub Desktop → cloning & commits
-  * VS Code → all development work
-
----
-
-## 🚀 STEP 2 — Backend Initialization
-
-### Actions
+Step 4 complete.
 
 ```bash
-cd server
-npm init -y
+npm run dev
 ```
 
-### Outcome
+This resolved the issue immediately.
 
-* `package.json` successfully created
-* Confirmed Node.js and npm were working
+
+## Nodemon Behavior
+
+### What was observed
+
+Terminal showed repeated logs such as:
+
+```text
+[nodemon] restarting due to changes...
+Server is running on port 5000
+```
+
+### Why this is normal
+
+- Nodemon watches files for changes
+- Saving `index.js` triggers an automatic restart
+- Live reload confirms Nodemon is working correctly
+
+No action required.
 
 ---
 
-## 🚀 STEP 3 — Prisma Setup
+## Backend Verification
 
-### Actions
+### Action taken
+
+Opened the browser at `http://localhost:5000`.
+
+### Result
+
+The browser displayed:
+
+```text
+Smart Task Manager API is running
+```
+
+This confirms:
+
+- Express server is running
+- Routing responds
+- Environment variables load correctly
+
+---
+
+## Questions & Answers
+
+- **Is it normal that the terminal looks stuck?**
+  - Yes — a running server waits for requests.
+- **Did I make a mistake?**
+  - No — issues were configuration-related and resolved.
+- **Why does Nodemon keep restarting?**
+  - Because file watching is enabled (development feature).
+
+---
+
+## Current State (Checkpoint)
+
+- Express server running
+- ES modules configured
+- Environment variables loaded
+- Nodemon live reload working
+- API reachable in browser
+- Errors documented and resolved
+
+---
+
+## Database Integration (PostgreSQL + Prisma)
+
+### Objective
+
+Connect the Express backend to PostgreSQL using Prisma and replace placeholder routes with real database queries.
+
+### Goals
+
+- Define a `Task` model
+- Configure Prisma
+- Generate and apply a migration
+- Connect Prisma to the Express app
+- Fetch data via `/tasks`
+
+### Install & initialise Prisma
+
+Commands used:
 
 ```bash
+npm install prisma --save-dev
+npm install @prisma/client
 npx prisma init
 ```
 
-### Outcome
+This generated:
 
-* `prisma/schema.prisma` created
-* `.env` file created
-* Prisma configuration initialized
+- `prisma/schema.prisma`
+- `.env`
+- `prisma.config.ts`
 
----
+### Defining the schema
 
-## 🚀 STEP 4 — PostgreSQL Installation (Major Side Quest)
+Example `schema.prisma` model:
 
-### Environment
-
-* Windows OS
-* PostgreSQL 18
-* Custom port: **2707**
-
-### Initial Problem
-
-```text
-'psql' is not recognized as an internal or external command
+```prisma
+model Task {
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String?
+}
 ```
 
-### Root Cause
+Datasource example:
 
-* PostgreSQL installed, but **not added to PATH**
-
-### Fix
-
-* Added:
-
-```
-C:\Program Files\PostgreSQL\18\bin
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 ```
 
-* Restarted system
-
-### Verification
+### Run the migration
 
 ```bash
-psql --version
+npx prisma migrate dev --name init_task_model
 ```
+
+If you see an error about the `url` datasource property, update `prisma.config.ts` to modern Prisma configuration.
+
+### Generate Prisma Client
+
+```bash
+npx prisma generate
+```
+
+Client will be available under `node_modules/@prisma/client`.
+
+### Prisma client instance
+
+Example `src/prisma.js`:
+
+```js
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export default prisma;
+```
+
+### Common issues & fixes
+
+- Avoid passing unsupported options to `new PrismaClient()`; use the default constructor
+- Install `@types/node` to address TypeScript `process` not found warnings
+
+### Connecting to Express routes
+
+Example `/tasks` route:
+
+```js
+app.get('/tasks', async (req, res) => {
+  try {
+    const tasks = await prisma.task.findMany();
+    res.json(tasks);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
+});
+```
+
+If the database has no records, `/tasks` will return `[]` — an empty array indicates a working route and connection.
 
 ---
 
-## 🚀 STEP 5 — PostgreSQL Authentication Issues (Critical Learning)
+## Final verification
 
-### Symptoms
+Start the server:
 
-* pgAdmin could not connect
-* SQL Shell rejected empty password
-* Prisma unable to connect
-
-### Errors Seen
-
-```text
-FATAL: password authentication failed for user "postgres"
-fe_sendauth: no password supplied
+```bash
+cd server
+npm run dev
 ```
 
-### Root Cause
+Visit:
 
-* PostgreSQL configured to require password authentication
-* No usable password set during installation
+- `http://localhost:5000` → API running message
+- `http://localhost:5000/tasks` → `[]` or task data
 
 ---
 
-## 🚀 STEP 6 — Service & Permission Issues
+## Lessons learned
 
-### Problems
-
-* PostgreSQL service could not be restarted via Services UI
-* Restart option greyed out
-
-### Resolution
-
-Restarted service via **Administrator Command Prompt**:
-
-```bat
-net stop postgresql-x64-18
-net start postgresql-x64-18
-```
+- Prisma v7 configuration differs from older tutorials
+- Constructor overrides are rarely needed
+- Blank JSON responses can still indicate success
+- TypeScript warnings do not always indicate runtime failures
 
 ---
 
-## 🚀 STEP 7 — Authentication Recovery (Advanced)
+## Step 4 status
 
-### Actions
+- PostgreSQL connected
+- Prisma schema migrated
+- Prisma Client generated
+- Express route querying database successfully
+- No runtime crashes
 
-* Logged into PostgreSQL via `psql`
-* Manually set password
+Development environment stable
 
-```sql
-ALTER USER postgres WITH PASSWORD 'MyStrongPass123!';
+Step 4 complete.
+Server is running on port 5000
+```
+
+### Why This Is Normal
+
+- Nodemon watches files for changes
+- Saving `index.js` triggers a restart
+- Live-reload confirms Nodemon is working as intended
+
+No action required.
+
+---
+
+## Backend Verification
+
+### Action Taken
+
+Opened the browser at:
+
+```
+http://localhost:5000
 ```
 
 ### Result
 
-* Authentication restored
-* pgAdmin, psql, and Prisma now functional
+The browser displayed:
 
----
-
-## 🚀 STEP 8 — Database Creation
-
-```sql
-CREATE DATABASE smart_task_manager;
+```
+Smart Task Manager API is running
 ```
 
-Confirmed database exists and is accessible.
+This confirms the Express server is running, routing works, and environment variables are loading.
 
 ---
 
-## 🚀 STEP 9 — Prisma Schema
+## Questions & Answers
 
-### Models
+### Is it normal that the terminal looks stuck?
+
+Yes. A running server waits for requests — this is expected.
+
+### Did I make a mistake?
+
+No. The backend behaved as intended; issues were configuration-related.
+
+### Why does Nodemon keep restarting?
+
+Because file watching is enabled — it is a development feature.
+
+---
+
+## Current State (Checkpoint)
+
+- Express server running
+- ES Modules configured
+- Environment variables loaded
+- Nodemon live reload working
+- API reachable in browser
+- Documented errors and resolutions
+
+---
+
+## STEP 4 — Database Integration (PostgreSQL + Prisma)
+
+### Objective
+
+Connect the Express backend to PostgreSQL using Prisma and replace placeholder routes with real database queries.
+
+### Goals
+
+- Define a Task model
+- Configure Prisma
+- Generate and apply a migration
+- Connect Prisma to the Express app
+- Fetch data via `/tasks`
+
+### Installing and Initialising Prisma
+
+Commands used:
+
+- `npm install prisma --save-dev`
+- `npm install @prisma/client`
+- `npx prisma init`
+
+This generated:
+
+- `prisma/schema.prisma`
+- `.env`
+- `prisma.config.ts`
+
+### Defining the Database Schema
+
+Example model added to `schema.prisma`:
 
 ```prisma
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  tasks     Task[]
-  createdAt DateTime @default(now())
-}
-
 model Task {
-  id          String   @id @default(uuid())
+  id          Int     @id @default(autoincrement())
   title       String
   description String?
-  completed   Boolean  @default(false)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
 }
 ```
 
----
+Datasource configured for PostgreSQL:
 
-## 🚀 STEP 10 — Prisma Migration
-
-```bash
-npx prisma migrate dev --name init
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 ```
 
-### Outcome
+### Running the First Migration
 
-* Database schema applied
-* Prisma Client generated
-* Backend officially connected to a real database
+Command:
 
----
+```bash
+npx prisma migrate dev --name init_task_model
+```
 
-## 🧠 Key Lessons Learned
+If you see an error about the `url` datasource property, update `prisma.config.ts` and follow modern Prisma configuration practices.
 
-* Environment setup is part of real development
-* Windows database auth can be non‑trivial
-* Knowing **how to recover**, not just install, is a real skill
-* Debugging systematically beats guessing
+### Generating Prisma Client
 
----
+```bash
+npx prisma generate
+```
 
-## 📈 Why This README Exists
+Prisma Client will be available under `node_modules/@prisma/client`.
 
-This documentation proves:
+### Creating Prisma Client Instance
 
-* Real problem‑solving ability
-* Comfort with backend infrastructure
-* Willingness to document and reflect
-
-> Most portfolios show success. This one shows **process**.
-
----
-
-## 🔜 Next Steps
-
-* Build Express server
-* Integrate Prisma client
-* Implement authentication (JWT + bcrypt)
-* Add task CRUD endpoints
-
-*(This README will continue to grow as the project evolves.)*
-
----
-
-## 🚀 STEP 3 — Express Server Foundation (Backend Comes Alive)
-
-This step marks the point where the backend officially becomes **alive and testable**. From here on, the focus is on building real backend functionality while documenting *everything* — including mistakes, fixes, and learning moments.
-
----
-
-### 🎯 Goal of This Step
-
-* Initialize an Express server
-* Resolve Node.js module system issues (ESM vs CommonJS)
-* Configure environment variables correctly
-* Run a stable development server with Nodemon
-* Verify the backend via browser
-
----
-
-## 🧱 Step 3.1 — Creating the Express Server Entry Point
-
-**File created:** `server/index.js`
-
-Initial setup included:
-
-* Express
-* CORS
-* dotenv
+Example `src/prisma.js`:
 
 ```js
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 
-dotenv.config();
+const prisma = new PrismaClient();
 
-const app = express();
+export default prisma;
+```
 
-app.use(cors());
-app.use(express.json());
+### Common Issues & Fixes
 
-const PORT = process.env.PORT || 5000;
+- Do not pass unsupported options to `new PrismaClient()`; prefer the default constructor.
+- Install `@types/node` to address TypeScript `process` not found warnings.
 
-app.get('/', (req, res) => {
-  res.send('Smart Task Manager API is running');
-});
+### Connecting Prisma to Express Routes
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+Example `/tasks` route:
+
+```js
+app.get('/tasks', async (req, res) => {
+  try {
+    const tasks = await prisma.task.findMany();
+    res.json(tasks);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
 });
 ```
 
----
+If the database has no records, `/tasks` will return `[]` — an empty array indicates the route and connection are working.
 
-## ❌ Error Encountered — "Cannot use import statement outside a module"
-
-### 🔴 What Happened
-
-Running:
+### Final Verification
 
 ```bash
 npm run dev
 ```
 
-Resulted in:
+Visit:
 
-```
-SyntaxError: Cannot use import statement outside a module
-```
+- `http://localhost:5000` → API running message
+- `http://localhost:5000/tasks` → `[]` or task data
 
-### 🤔 Why This Happened
+### Lessons Learned
 
-Node.js defaults to **CommonJS** modules, but the server was written using **ES Modules (import/export)** syntax.
+- Prisma v7 configuration differs from older tutorials
+- Constructor overrides are rarely needed
+- Blank JSON responses can still indicate success
+- TypeScript warnings do not always indicate runtime failures
 
----
+### Step 4 Status
 
-## ✅ Solution — Enable ES Modules Properly
+- PostgreSQL connected
+- Prisma schema migrated
+- Prisma Client generated
+- Express route querying database successfully
+- No runtime crashes
 
-### Fix Applied in `server/package.json`
+Step 4 complete.
 
-The following property was **added/confirmed**:
-
-```json
-"type": "module"
-```
-
-⚠️ Important Note:
-
-* The property must be exactly `"type": "module"`
-* NOT `"types"`
-
-After saving, Nodemon automatically restarted the server.
-
----
-
-## ❌ Error Encountered — npm ENOENT (package.json not found)
-
-### 🔴 What Happened
-
-Running:
-
-```bash
-npm run dev
-```
-
-From the **project root** caused:
-
-```
-npm ERR! enoent Could not read package.json
-```
-
-### 🤔 Why This Happened
-
-The `package.json` exists **inside the `server/` folder**, not the project root.
-
----
-
-## ✅ Solution — Run Commands from Correct Directory
-
-Correct workflow:
-
-```bash
-cd server
 npm run dev
 ```
 
@@ -496,8 +516,262 @@ At the end of Step 3:
 
 ---
 
-➡️ **Next Step (Coming Up):**
+STEP 4 — Database Integration (PostgreSQL + Prisma)
+Objective
 
-Connecting Prisma to PostgreSQL and creating the first real database-backed API route.
+Connect the Express backend to a PostgreSQL database using Prisma ORM and replace placeholder routes with real database queries.
 
-(We will continue documenting directly in this file as we go.)
+The goal was to:
+
+Define a Task model
+
+Configure Prisma properly
+
+Generate and apply a migration
+
+Connect Prisma to the Express app
+
+Fetch real data from the database via /tasks
+
+4.1 Installing and Initialising Prisma
+
+Prisma was installed and initialised inside the server directory.
+
+Commands used:
+
+npm install prisma --save-dev
+npm install @prisma/client
+npx prisma init
+
+
+This generated:
+
+prisma/schema.prisma
+
+.env
+
+prisma.config.ts
+
+4.2 Defining the Database Schema
+
+The following model was added to schema.prisma:
+
+model Task {
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String?
+}
+
+
+The datasource was configured for PostgreSQL using:
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+4.3 Running the First Migration
+
+Command:
+
+npx prisma migrate dev --name init_task_model
+
+Initial Error Encountered
+
+Error:
+
+The datasource property 'url' is no longer supported in schema files
+
+Why This Happened
+
+Recent Prisma versions moved some connection configuration logic to prisma.config.ts. The schema was still referencing url, which caused a validation error.
+
+Resolution
+
+We updated prisma.config.ts to include:
+
+import 'dotenv/config';
+import { defineConfig } from 'prisma/config';
+
+export default defineConfig({
+  schema: 'prisma/schema.prisma',
+  migrations: {
+    path: 'prisma/migrations',
+  },
+  datasource: {
+    url: process.env.DATABASE_URL,
+  },
+});
+
+
+After correcting configuration, the migration ran successfully.
+
+Terminal confirmation:
+
+Your database is now in sync with your schema.
+
+4.4 Generating Prisma Client
+
+Command:
+
+npx prisma generate
+
+
+Prisma Client was generated inside:
+
+node_modules/@prisma/client
+
+4.5 Creating Prisma Client Instance
+
+File created: src/prisma.js
+
+Final working version:
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export default prisma;
+
+Major Errors Encountered During Client Setup
+Error 1 — PrismaClientConstructorValidationError
+
+Error:
+
+PrismaClient needs to be constructed with a non-empty, valid PrismaClientOptions
+
+Why It Happened
+
+We attempted to pass unsupported options such as:
+
+datasourceUrl
+
+engineType
+
+other outdated configuration examples
+
+These are not valid in Prisma v7 unless using specific adapters.
+
+Resolution
+
+Reverted to:
+
+new PrismaClient();
+
+
+Prisma automatically reads configuration from the environment and generated client metadata.
+
+Error 2 — Unknown property datasourceUrl
+
+Error:
+
+Unknown property datasourceUrl provided to PrismaClient constructor
+
+
+Cause: Attempted manual override of datasource in constructor.
+
+Fix: Removed custom options entirely.
+
+Error 3 — TypeScript "process not found"
+
+In prisma.config.ts, VS Code showed:
+
+Cannot find name 'process'
+
+
+Cause: Node type definitions not installed.
+
+Fix:
+
+npm install -D @types/node
+
+
+This resolved the editor warning without affecting runtime.
+
+4.6 Connecting Prisma to Express Routes
+
+Updated /tasks route:
+
+app.get('/tasks', async (req, res) => {
+  try {
+    const tasks = await prisma.task.findMany();
+    res.json(tasks);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
+});
+
+Question Asked During Development
+
+“I didn’t get GET http://localhost:5000/tasks
+ — I got a blank page.”
+
+Explanation
+
+The route was working correctly.
+
+When the database contains no records, Prisma returns:
+
+[]
+
+
+An empty array appears blank in a browser but confirms:
+
+Server is running
+
+Route exists
+
+Database connection is working
+
+Query executed successfully
+
+This was expected behaviour.
+
+Final Verification
+
+After restarting the server:
+
+npm run dev
+
+
+Terminal output:
+
+Server is running on port 5000
+
+
+Browser tests:
+
+http://localhost:5000 → API running message
+
+http://localhost:5000/tasks → []
+
+Database connection confirmed operational.
+
+Lessons Learned in Step 4
+
+Prisma v7 configuration differs from older tutorials
+
+Constructor overrides are rarely needed
+
+Prisma automatically manages connection config when properly generated
+
+Blank JSON responses can still indicate success
+
+TypeScript warnings do not always indicate runtime failures
+
+Step 4 Status
+
+PostgreSQL connected
+
+Prisma schema migrated
+
+Prisma Client generated
+
+Express route querying database successfully
+
+No runtime crashes
+
+Development environment stable
+
+Step 4 complete.
