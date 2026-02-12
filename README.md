@@ -2,9 +2,6 @@
 
 A full‑stack productivity application built as a professional portfolio project. This repository documents the build process, setup decisions, errors encountered, fixes applied, and lessons learned.
 
-> This README is intentionally detailed — it demonstrates real‑world debugging, system configuration, and problem‑solving useful for employers.
-TypeScript warnings do not always indicate runtime failures
-
 ## Step 4 Status
 
 - PostgreSQL connected
